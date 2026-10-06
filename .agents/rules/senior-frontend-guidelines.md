@@ -1,0 +1,5 @@
+---
+trigger: always_on
+---
+
+build this project with senior frontend engineering standards. use clean reusable react components, clear naming, simple maintainable architecture, and avoid unnecessary complexity. create a modern professional and responsive ui with consistent spacing, typography, colors, borders, and visual hierarchy. ensure good ux with clear hover, focus, empty, error, and drag states. use semantic html and basic accessibility best practices. use native html5 drag and drop only. keep state management simple and local where possible. handle localstorage safely and avoid unnecessary rerenders. validate forms and handle edge cases gracefully. avoid duplicated code, unused code, unnecessary dependencies, and unrelated file changes. keep the design polished, lightweight, responsive, accessible, and production ready without adding features outside the assignment requirements.
