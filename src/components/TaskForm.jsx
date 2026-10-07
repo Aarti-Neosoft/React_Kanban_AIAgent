@@ -9,7 +9,7 @@ import { PRIORITIES, DEFAULT_PRIORITY } from '../constants/columns';
  * @param {boolean} props.isOpen - Whether the modal is open
  * @param {Object|null} props.taskToEdit - Task being edited, or null if creating
  * @param {string} [props.defaultColumnId='todo'] - Pre-selected column for new tasks
- * @param {Function} props.onSave - Callback on valid submit ({ id, title, description, status, priority })
+ * @param {Function} props.onSave - Callback on valid submit ({ id, title, description, status, priority, dueDate })
  * @param {Function} props.onClose - Callback when modal is cancelled/closed
  */
 export default function TaskForm({
@@ -24,6 +24,7 @@ export default function TaskForm({
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [priority, setPriority] = useState(DEFAULT_PRIORITY);
+  const [dueDate, setDueDate] = useState('');
   const [error, setError] = useState('');
   const titleInputRef = useRef(null);
 
@@ -34,10 +35,12 @@ export default function TaskForm({
         setTitle(taskToEdit.title || '');
         setDescription(taskToEdit.description || '');
         setPriority(taskToEdit.priority || DEFAULT_PRIORITY);
+        setDueDate(taskToEdit.dueDate || '');
       } else {
         setTitle('');
         setDescription('');
         setPriority(DEFAULT_PRIORITY);
+        setDueDate('');
       }
       setError('');
 
@@ -83,13 +86,15 @@ export default function TaskForm({
       title: trimmedTitle,
       description: description.trim(),
       status: isEditing ? taskToEdit.status : defaultColumnId,
-      priority: priority || DEFAULT_PRIORITY
+      priority: priority || DEFAULT_PRIORITY,
+      dueDate: dueDate || null
     });
 
     // Reset and close
     setTitle('');
     setDescription('');
     setPriority(DEFAULT_PRIORITY);
+    setDueDate('');
     setError('');
   };
 
@@ -171,6 +176,19 @@ export default function TaskForm({
                 </option>
               ))}
             </select>
+          </div>
+
+          <div className="form-group">
+            <label htmlFor="task-due-date-input" className="form-label">
+              Due Date <span className="form-optional">(optional)</span>
+            </label>
+            <input
+              id="task-due-date-input"
+              type="date"
+              className="form-input"
+              value={dueDate}
+              onChange={(e) => setDueDate(e.target.value)}
+            />
           </div>
 
           <div className="form-group">

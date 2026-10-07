@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { COLUMNS, VALID_COLUMN_IDS, DEFAULT_COLUMN_ID, PRIORITIES, DEFAULT_PRIORITY } from '../constants/columns';
 import { loadTasksFromStorage, saveTasksToStorage, generateNextTaskId } from '../utils/storage';
 import KanbanColumn from './KanbanColumn';
@@ -30,6 +30,12 @@ export default function KanbanBoard() {
     taskId: null,
     taskTitle: ''
   });
+  const [deletedTask, setDeletedTask] = useState(null);
+  const undoTimeoutRef = useRef(null);
+
+  useEffect(() => () => {
+    if (undoTimeoutRef.current) clearTimeout(undoTimeoutRef.current);
+  }, []);
 
   // Automatically persist tasks to localStorage whenever tasks change
   useEffect(() => {
@@ -147,7 +153,7 @@ export default function KanbanBoard() {
     setTaskToEdit(null);
   };
 
-  const handleSaveTask = ({ id, title, description, status, priority }) => {
+  const handleSaveTask = ({ id, title, description, status, priority, dueDate }) => {
     if (id) {
       // Edit existing task: keeps existing column status and updates priority
       setTasks((prevTasks) =>
@@ -158,6 +164,7 @@ export default function KanbanBoard() {
                 title,
                 description,
                 priority: priority || t.priority || DEFAULT_PRIORITY,
+                dueDate: dueDate || null,
                 status: t.status // preserve existing column
               }
             : t
@@ -171,7 +178,8 @@ export default function KanbanBoard() {
           title,
           description,
           status: status || DEFAULT_COLUMN_ID,
-          priority: priority || DEFAULT_PRIORITY
+          priority: priority || DEFAULT_PRIORITY,
+          dueDate: dueDate || null
         };
         return [...prevTasks, newTask];
       });
@@ -201,10 +209,28 @@ export default function KanbanBoard() {
   };
 
   const handleConfirmDelete = () => {
-    if (deleteModal.taskId) {
-      setTasks((prevTasks) => prevTasks.filter((t) => t.id !== deleteModal.taskId));
+    const taskToDelete = tasks.find((task) => task.id === deleteModal.taskId);
+    if (taskToDelete) {
+      setTasks((prevTasks) => prevTasks.filter((task) => task.id !== taskToDelete.id));
+      setDeletedTask(taskToDelete);
+
+      if (undoTimeoutRef.current) clearTimeout(undoTimeoutRef.current);
+      undoTimeoutRef.current = setTimeout(() => {
+        setDeletedTask(null);
+        undoTimeoutRef.current = null;
+      }, 5000);
     }
     handleCloseDeleteModal();
+  };
+
+  const handleUndoDelete = () => {
+    if (!deletedTask) return;
+
+    if (undoTimeoutRef.current) clearTimeout(undoTimeoutRef.current);
+    const taskToRestore = deletedTask;
+    setTasks((prevTasks) => [...prevTasks, taskToRestore]);
+    setDeletedTask(null);
+    undoTimeoutRef.current = null;
   };
 
   return (
@@ -349,6 +375,15 @@ export default function KanbanBoard() {
         onConfirm={handleConfirmDelete}
         onClose={handleCloseDeleteModal}
       />
+
+      {deletedTask && (
+        <div className="undo-toast" role="status" aria-live="polite">
+          <span>Task deleted.</span>
+          <button type="button" className="undo-toast__button" onClick={handleUndoDelete}>
+            Undo
+          </button>
+        </div>
+      )}
     </div>
   );
 }

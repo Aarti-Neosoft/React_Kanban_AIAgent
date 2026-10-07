@@ -1,4 +1,5 @@
 import React from 'react';
+import { formatDueDate, isOverdue } from '../utils/dates';
 
 /**
  * TaskCard Component
@@ -50,11 +51,12 @@ export default function TaskCard({
 
   const priority = task.priority || 'medium';
   const priorityLabel = priority.charAt(0).toUpperCase() + priority.slice(1);
+  const overdue = isOverdue(task.dueDate, task.status);
 
   return (
     <article
       id={`task-card-${task.id}`}
-      className={`task-card ${isDragging ? 'task-card--dragging' : ''}`}
+      className={`task-card ${isDragging ? 'task-card--dragging' : ''} ${overdue ? 'task-card--overdue' : ''}`}
       draggable={true}
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
@@ -86,6 +88,12 @@ export default function TaskCard({
         <h4 className="task-card__title">{task.title}</h4>
         {task.description && task.description.trim().length > 0 && (
           <p className="task-card__description">{task.description}</p>
+        )}
+        {task.dueDate && (
+          <p className={`task-card__due-date ${overdue ? 'task-card__due-date--overdue' : ''}`}>
+            Due: {formatDueDate(task.dueDate)}
+            {overdue && <span className="task-card__overdue-label">Overdue</span>}
+          </p>
         )}
       </div>
 

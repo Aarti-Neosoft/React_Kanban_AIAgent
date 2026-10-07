@@ -618,6 +618,15 @@ button {
   background-color: #faf5ff;
 }
 
+.task-card--overdue {
+  border-color: #fca5a5;
+  background-color: #fff7f7;
+}
+
+.task-card--overdue:hover {
+  border-color: #ef4444;
+}
+
 .task-card__drag-indicator {
   position: absolute;
   top: 0.75rem;
@@ -706,6 +715,56 @@ button {
   line-height: 1.45;
   white-space: pre-wrap;
   word-break: break-word;
+}
+
+.task-card__due-date {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  margin-top: 0.625rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+}
+
+.task-card__due-date--overdue {
+  color: #b91c1c;
+}
+
+.task-card__overdue-label {
+  padding: 0.1rem 0.4rem;
+  border-radius: var(--radius-full);
+  background-color: #fee2e2;
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.undo-toast {
+  position: fixed;
+  right: 1.5rem;
+  bottom: 1.5rem;
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  gap: 0.875rem;
+  padding: 0.8rem 1rem;
+  border-radius: var(--radius-md);
+  background-color: #1e293b;
+  color: #fff;
+  box-shadow: var(--shadow-md);
+  font-size: 0.875rem;
+}
+
+.undo-toast__button {
+  color: #bfdbfe;
+  font-weight: 700;
+  text-decoration: underline;
+  background: transparent;
+}
+
+.undo-toast__button:hover {
+  color: #fff;
 }
 
 .task-card__actions {
