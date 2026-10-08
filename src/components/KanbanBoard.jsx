@@ -4,10 +4,12 @@ import { loadTasksFromStorage, saveTasksToStorage, generateNextTaskId } from '..
 import KanbanColumn from './KanbanColumn';
 import TaskForm from './TaskForm';
 import DeleteConfirmModal from './DeleteConfirmModal';
+import MessyTaskList from './MessyTaskList';
 
 /**
  * KanbanBoard Component
- * Main coordinator for board state, drag-and-drop events, modal dialogs, and persistence.
+ * Main coordinator for board state, drag-and-drop events, keyboard task movements,
+ * modal dialogs, persistence, and task activity integration.
  */
 export default function KanbanBoard() {
   // Initialize tasks from localStorage safely
@@ -18,6 +20,15 @@ export default function KanbanBoard() {
 
   // Drag-and-drop state
   const [activeDragTaskId, setActiveDragTaskId] = useState(null);
+
+  // Active selected task ID for activity & notes (Phase 3)
+  const [selectedTaskId, setSelectedTaskId] = useState(() => {
+    const initialTasks = loadTasksFromStorage();
+    return initialTasks.length > 0 ? initialTasks[0].id : null;
+  });
+
+  // Accessible live announcement message for screen readers
+  const [liveAnnouncement, setLiveAnnouncement] = useState('');
 
   // Form modal state (for create & edit)
   const [isFormOpen, setIsFormOpen] = useState(false);
@@ -42,6 +53,12 @@ export default function KanbanBoard() {
     saveTasksToStorage(tasks);
   }, [tasks]);
 
+  // Selected task derivation
+  const selectedTask = useMemo(() => {
+    if (!tasks || tasks.length === 0) return null;
+    return tasks.find((t) => t.id === selectedTaskId) || tasks[0];
+  }, [tasks, selectedTaskId]);
+
   // Priority counts for filter pills
   const priorityCounts = useMemo(() => {
     const counts = { all: tasks.length, high: 0, medium: 0, low: 0 };
@@ -62,7 +79,7 @@ export default function KanbanBoard() {
     return tasks.filter((t) => (t.priority || DEFAULT_PRIORITY) === priorityFilter);
   }, [tasks, priorityFilter]);
 
-  // Group filtered tasks by column status using useMemo to avoid unnecessary recalculations
+  // Group filtered tasks by column status
   const tasksByColumn = useMemo(() => {
     const grouped = {
       'todo': [],
@@ -91,7 +108,7 @@ export default function KanbanBoard() {
   }, [tasks]);
 
   /* -------------------------------------------------------------
-   * Drag and Drop Handlers (HTML5 Native DnD)
+   * Drag, Drop, and Keyboard Movement Handlers
    * ----------------------------------------------------------- */
 
   const handleDragStart = (taskId) => {
@@ -102,26 +119,31 @@ export default function KanbanBoard() {
     setActiveDragTaskId(null);
   };
 
-  const handleDropTask = (draggedTaskId, targetColumnId) => {
+  const handleMoveTask = (taskId, targetColumnId) => {
     setActiveDragTaskId(null);
 
     // Defensive validation
-    if (!draggedTaskId || !VALID_COLUMN_IDS.includes(targetColumnId)) {
+    if (!taskId || !VALID_COLUMN_IDS.includes(targetColumnId)) {
       return;
     }
 
     setTasks((prevTasks) => {
-      const taskIndex = prevTasks.findIndex((t) => t.id === draggedTaskId);
+      const taskIndex = prevTasks.findIndex((t) => t.id === taskId);
       if (taskIndex === -1) {
         return prevTasks;
       }
 
       const currentTask = prevTasks[taskIndex];
 
-      // If dropped in the same column, no status update needed
+      // If already in target column, no update needed
       if (currentTask.status === targetColumnId) {
         return prevTasks;
       }
+
+      const targetCol = COLUMNS.find((col) => col.id === targetColumnId);
+      setLiveAnnouncement(
+        `Moved task "${currentTask.title}" to ${targetCol?.title || targetColumnId}`
+      );
 
       const updatedTasks = [...prevTasks];
       updatedTasks[taskIndex] = {
@@ -131,6 +153,33 @@ export default function KanbanBoard() {
 
       return updatedTasks;
     });
+  };
+
+  const handleDropTask = (draggedTaskId, targetColumnId) => {
+    handleMoveTask(draggedTaskId, targetColumnId);
+  };
+
+  /* -------------------------------------------------------------
+   * Task Activity / Comments Update Handler (Phase 3 Integration)
+   * ----------------------------------------------------------- */
+
+  const handleTaskUpdate = (taskId, updates) => {
+    if (!taskId || !updates) return;
+
+    setTasks((prevTasks) =>
+      prevTasks.map((t) =>
+        t.id === taskId
+          ? {
+              ...t,
+              ...updates
+            }
+          : t
+      )
+    );
+  };
+
+  const handleSelectTask = (taskId) => {
+    setSelectedTaskId(taskId);
   };
 
   /* -------------------------------------------------------------
@@ -155,7 +204,7 @@ export default function KanbanBoard() {
 
   const handleSaveTask = ({ id, title, description, status, priority, dueDate }) => {
     if (id) {
-      // Edit existing task: keeps existing column status and updates priority
+      // Edit existing task: preserve existing column status, comments, and update fields
       setTasks((prevTasks) =>
         prevTasks.map((t) =>
           t.id === id
@@ -164,25 +213,28 @@ export default function KanbanBoard() {
                 title,
                 description,
                 priority: priority || t.priority || DEFAULT_PRIORITY,
-                dueDate: dueDate || null,
-                status: t.status // preserve existing column
+                dueDate: dueDate || null
               }
             : t
         )
       );
+      setLiveAnnouncement(`Updated task "${title}"`);
     } else {
-      // Create new task with sequential ID and priority
-      setTasks((prevTasks) => {
-        const newTask = {
-          id: generateNextTaskId(prevTasks),
-          title,
-          description,
-          status: status || DEFAULT_COLUMN_ID,
-          priority: priority || DEFAULT_PRIORITY,
-          dueDate: dueDate || null
-        };
-        return [...prevTasks, newTask];
-      });
+      // Create new task with sequential ID
+      const newTaskId = generateNextTaskId(tasks);
+      const newTask = {
+        id: newTaskId,
+        title,
+        description,
+        status: status || DEFAULT_COLUMN_ID,
+        priority: priority || DEFAULT_PRIORITY,
+        dueDate: dueDate || null,
+        comments: []
+      };
+
+      setTasks((prevTasks) => [...prevTasks, newTask]);
+      setSelectedTaskId(newTaskId);
+      setLiveAnnouncement(`Created new task "${title}"`);
     }
 
     handleCloseForm();
@@ -211,8 +263,15 @@ export default function KanbanBoard() {
   const handleConfirmDelete = () => {
     const taskToDelete = tasks.find((task) => task.id === deleteModal.taskId);
     if (taskToDelete) {
-      setTasks((prevTasks) => prevTasks.filter((task) => task.id !== taskToDelete.id));
+      setTasks((prevTasks) => {
+        const remaining = prevTasks.filter((task) => task.id !== taskToDelete.id);
+        if (selectedTaskId === taskToDelete.id) {
+          setSelectedTaskId(remaining.length > 0 ? remaining[0].id : null);
+        }
+        return remaining;
+      });
       setDeletedTask(taskToDelete);
+      setLiveAnnouncement(`Deleted task "${taskToDelete.title}"`);
 
       if (undoTimeoutRef.current) clearTimeout(undoTimeoutRef.current);
       undoTimeoutRef.current = setTimeout(() => {
@@ -229,12 +288,19 @@ export default function KanbanBoard() {
     if (undoTimeoutRef.current) clearTimeout(undoTimeoutRef.current);
     const taskToRestore = deletedTask;
     setTasks((prevTasks) => [...prevTasks, taskToRestore]);
+    setSelectedTaskId(taskToRestore.id);
+    setLiveAnnouncement(`Restored deleted task "${taskToRestore.title}"`);
     setDeletedTask(null);
     undoTimeoutRef.current = null;
   };
 
   return (
     <div className="kanban-app">
+      {/* Live Region for Screen Reader Announcements */}
+      <div className="visually-hidden" role="status" aria-live="polite" aria-atomic="true">
+        {liveAnnouncement}
+      </div>
+
       {/* Top Application Header */}
       <header className="kanban-header">
         <div className="kanban-header__container">
@@ -249,7 +315,7 @@ export default function KanbanBoard() {
             <div>
               <h1 className="kanban-header__title">Kanban Task Board</h1>
               <p className="kanban-header__subtitle">
-                Organize, track, and complete your tasks with seamless drag &amp; drop
+                Organize, track, and complete your tasks with seamless drag &amp; drop and keyboard navigation
               </p>
             </div>
           </div>
@@ -341,6 +407,7 @@ export default function KanbanBoard() {
           )}
         </section>
 
+        {/* 3-Column Grid */}
         <div className="kanban-columns-grid">
           {COLUMNS.map((column) => (
             <KanbanColumn
@@ -348,15 +415,75 @@ export default function KanbanBoard() {
               column={column}
               tasks={tasksByColumn[column.id] || []}
               activeDragTaskId={activeDragTaskId}
+              selectedTaskId={selectedTaskId}
               onDragStart={handleDragStart}
               onDragEnd={handleDragEnd}
               onDropTask={handleDropTask}
               onEditTask={handleOpenEditModal}
               onDeleteTask={handleOpenDeleteModal}
               onQuickAddTask={handleOpenCreateModal}
+              onSelectTask={handleSelectTask}
+              onMoveTask={handleMoveTask}
             />
           ))}
         </div>
+
+        {/* Task Activity & Notes Section (Phase 3 Integration) */}
+        <section className="kanban-activity-section" aria-labelledby="activity-section-heading">
+          <div className="kanban-activity-header">
+            <div>
+              <h2 id="activity-section-heading" className="kanban-activity-title">
+                Task Notes &amp; Activity
+              </h2>
+              <p className="kanban-activity-subtitle">
+                Select any task card above or use the selector below to view notes, timeline, and add comments
+              </p>
+            </div>
+            {tasks.length > 0 && (
+              <div className="kanban-activity-selector">
+                <label htmlFor="activity-task-select" className="activity-selector-label">
+                  Active Task:
+                </label>
+                <select
+                  id="activity-task-select"
+                  className="form-select activity-task-select"
+                  value={selectedTask?.id || ''}
+                  onChange={(e) => handleSelectTask(e.target.value)}
+                  aria-label="Select active task for notes"
+                >
+                  {tasks.map((t) => (
+                    <option key={t.id} value={t.id}>
+                      {t.title} ({t.status})
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+          </div>
+
+          {selectedTask ? (
+            <div className="kanban-activity-body">
+              <div className="selected-task-pill">
+                <span className="selected-task-pill__label">Active Task:</span>
+                <strong className="selected-task-pill__title">{selectedTask.title}</strong>
+                <span className={`priority-badge priority-badge--${selectedTask.priority || 'medium'}`}>
+                  {selectedTask.priority || 'medium'}
+                </span>
+                <span className="selected-task-pill__status">
+                  Status: {COLUMNS.find((c) => c.id === selectedTask.status)?.title || selectedTask.status}
+                </span>
+              </div>
+              <MessyTaskList
+                task={selectedTask}
+                onUpdate={handleTaskUpdate}
+              />
+            </div>
+          ) : (
+            <div className="kanban-activity-empty">
+              <p>No tasks available to view activity. Create a task above to begin tracking notes.</p>
+            </div>
+          )}
+        </section>
       </main>
 
       {/* Create / Edit Task Modal Dialog */}
@@ -376,6 +503,7 @@ export default function KanbanBoard() {
         onClose={handleCloseDeleteModal}
       />
 
+      {/* Undo Toast Notification */}
       {deletedTask && (
         <div className="undo-toast" role="status" aria-live="polite">
           <span>Task deleted.</span>

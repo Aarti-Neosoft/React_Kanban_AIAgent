@@ -171,11 +171,6 @@ export const generateNextTaskId = (tasks = []) => {
 };
 
 /**
- * Backward compatibility alias for generateNextTaskId.
- */
-export const generateTaskId = (tasks) => generateNextTaskId(tasks);
-
-/**
  * Validates whether an individual task object satisfies the required structure.
  * Gracefully accepts tasks without priority or dueDate for backward compatibility.
  * @param {any} task
@@ -197,8 +192,8 @@ const isValidTask = (task) => {
 /**
  * Loads tasks safely from browser localStorage.
  * Falls back to initial sample tasks if empty, unparseable, or invalid.
- * Gracefully ensures all tasks have a valid priority and a nullable due date.
- * @returns {Array<{id: string, title: string, description: string, status: string, priority: string}>}
+ * Gracefully ensures all tasks have a valid priority, a nullable due date, and comments array.
+ * @returns {Array<{id: string, title: string, description: string, status: string, priority: string, dueDate: string|null, comments: Array}>}
  */
 export const loadTasksFromStorage = () => {
   try {
@@ -210,11 +205,12 @@ export const loadTasksFromStorage = () => {
     const parsed = JSON.parse(rawData);
 
     if (Array.isArray(parsed)) {
-      // Filter out any corrupted objects and normalize priority
+      // Filter out any corrupted objects and normalize priority, dueDate, and comments
       const sanitized = parsed.filter(isValidTask).map((task) => ({
         ...task,
         priority: VALID_PRIORITIES.includes(task.priority) ? task.priority : DEFAULT_PRIORITY,
-        dueDate: isDateOnly(task.dueDate) ? task.dueDate : null
+        dueDate: isDateOnly(task.dueDate) ? task.dueDate : null,
+        comments: Array.isArray(task.comments) ? task.comments : []
       }));
       return sanitized;
     }

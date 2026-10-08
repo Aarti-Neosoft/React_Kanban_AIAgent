@@ -10,23 +10,29 @@ import TaskCard from './TaskCard';
  * @param {Object} props.column - Column metadata { id, title, description, accentColor, emptyText }
  * @param {Array<Object>} props.tasks - List of tasks belonging to this column
  * @param {string|null} props.activeDragTaskId - ID of task currently being dragged, if any
+ * @param {string|null} [props.selectedTaskId] - ID of task currently selected, if any
  * @param {Function} props.onDragStart - Callback when drag begins on a child card
  * @param {Function} props.onDragEnd - Callback when drag ends
  * @param {Function} props.onDropTask - Callback when a task is dropped on this column (taskId, targetColumnId)
  * @param {Function} props.onEditTask - Callback to open edit modal for a task
  * @param {Function} props.onDeleteTask - Callback to open delete confirm for a task
- * @param {Function} props.onQuickAddTask - Callback to add task directly with this column pre-selected
+ * @param {Function} [props.onQuickAddTask] - Callback to add task directly with this column pre-selected
+ * @param {Function} [props.onSelectTask] - Callback when a task is selected
+ * @param {Function} [props.onMoveTask] - Callback when task is moved via keyboard or move button
  */
 export default function KanbanColumn({
   column,
   tasks = [],
   activeDragTaskId = null,
+  selectedTaskId = null,
   onDragStart,
   onDragEnd,
   onDropTask,
   onEditTask,
   onDeleteTask,
-  onQuickAddTask
+  onQuickAddTask,
+  onSelectTask,
+  onMoveTask
 }) {
   const [isDragOver, setIsDragOver] = useState(false);
 
@@ -122,11 +128,14 @@ export default function KanbanColumn({
             <TaskCard
               key={task.id}
               task={task}
+              isSelected={selectedTaskId === task.id}
               isDragging={activeDragTaskId === task.id}
               onDragStart={onDragStart}
               onDragEnd={onDragEnd}
               onEdit={onEditTask}
               onDelete={onDeleteTask}
+              onSelect={onSelectTask}
+              onMoveTask={onMoveTask}
             />
           ))
         )}

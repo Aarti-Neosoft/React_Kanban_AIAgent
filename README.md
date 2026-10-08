@@ -1,36 +1,58 @@
-# Kanban Task Board (Phase 1)
+# Kanban Task Board (Phases 1, 2 & 3)
 
-A clean, responsive, and accessible Kanban task management board built with **React** and **Vite**, using **native HTML5 Drag and Drop** and **browser localStorage** persistence.
+A modern, responsive, and accessible Kanban task management application built with **React 18** and **Vite**, featuring **native HTML5 Drag and Drop**, **full keyboard accessibility**, **task activity tracking**, **due dates & overdue handling**, **undo deletion**, and **resilient browser localStorage** persistence.
 
-This project was built following senior frontend engineering standards as Phase 1 of an AI Agent comparison assignment, designed to be lightweight, modular, and easy to extend in Phase 2.
+This project was built following senior frontend engineering standards as part of an AI Agent comparison assignment (AntiGravity vs Codex), progressively delivered across three phases.
 
 ---
 
-## 🚀 Features
+## 🚀 Key Features by Phase
 
-* **Three Standard Columns:**
-  * **To Do** (`todo`)
-  * **In Progress** (`in-progress`)
-  * **Done** (`done`)
-* **Task Management & Priority:**
-  * **Create Task:** Add new tasks with title, optional description, priority selection (High, Medium, Low), and automatic validation.
-  * **Edit Task:** Edit task title, description, and priority while preserving its current column status.
-  * **Priority Badges:** Distinct visual color badges for High (red), Medium (amber), and Low (emerald) priority.
-  * **Priority Filter:** Interactive filter bar to filter tasks by `All`, `High`, `Medium`, or `Low` with live counters.
-  * **Delete Task:** Clean, accessible confirmation dialog before task removal to prevent accidental deletion.
+### Phase 1: Core Kanban Board
+* **Three Lifecycle Columns:**
+  * **To Do** (`todo` - blue accent)
+  * **In Progress** (`in-progress` - amber accent)
+  * **Done** (`done` - emerald accent)
+* **Task CRUD Management:**
+  * **Create Task:** Add new tasks with title, optional description, priority selection (High, Medium, Low), and column placement.
+  * **Edit Task:** Modify task title, description, and priority while preserving its column status and notes history.
+  * **Delete Confirmation Modal:** Accessible dialog with autofocus, Escape-key dismiss, and backdrop click prevention before deletion.
+* **Priority Management & Filtering:**
+  * Visual priority badges for High (red), Medium (amber), and Low (green).
+  * Filter bar with live counters (`All`, `High`, `Medium`, `Low`) and a quick Reset button.
 * **Native HTML5 Drag and Drop:**
-  * Draggable task cards with clear visual cues (grab cursor, drag indicator, active dragging opacity).
-  * Interactive drop zones on columns with highlight feedback and drop indicators.
-  * Seamless moving between all columns in any direction (`To Do` ↔ `In Progress` ↔ `Done`).
-  * Action buttons (Edit/Delete) are event-isolated so dragging never accidentally triggers edits or deletions.
+  * Native browser DnD API (zero external drag dependencies).
+  * Smooth drag styling, grab/grabbing cursors, visual drop indicators, and event isolation on action buttons (`stopPropagation`).
 * **Resilient localStorage Persistence:**
-  * Auto-saves board state to `kanban_tasks` upon any change (create, edit, delete, move).
-  * Safe JSON parsing with fallback to initial sample tasks if data is missing, corrupted, or malformed.
-  * Automatic state restoration on page reload.
-* **Accessible & Responsive UI:**
-  * Semantic HTML (`<main>`, `<section>`, `<article>`, `<header>`, `<dialog>`).
-  * Visible focus indicators for keyboard navigation and modal dialogs with Escape key closing and backdrop dismiss.
-  * Responsive layout adapting from multi-column desktop grids to tablet and mobile screens.
+  * Auto-syncs to `kanban_tasks` on any state update.
+  * Schema validation and graceful fallback to initial sample tasks on parse errors or corrupted data.
+  * Safe sequential task ID generator (`generateNextTaskId`).
+
+### Phase 2: Enhanced Task Management
+* **Calendar Due Dates & Overdue Detection:**
+  * Task creation and editing forms support setting calendar due dates (`YYYY-MM-DD`).
+  * Timezone-safe local date comparison logic (`dates.js`) prevents off-by-one errors across timezones.
+  * Overdue tasks automatically display a prominent red border and "OVERDUE" status badge (only while not in "Done").
+* **Undo Delete Notification:**
+  * Deleting a task triggers a non-intrusive bottom-right toast notification.
+  * 5-second countdown with immediate "Undo" capability restoring the task and its comments.
+  * Clean timer management (`undoTimeoutRef`) preventing memory leaks on unmount.
+
+### Phase 3: Task Activity Integration & Accessibility
+* **Task Activity & Notes Integration (`MessyTaskList`):**
+  * Seamlessly integrated activity timeline component below the Kanban board.
+  * Active task selection: select any card on the board or use the synchronized task selector dropdown.
+  * Real-time session duration counter (`secondsActive`) tracking how long the user has been viewing the timeline.
+  * Add timestamped activity notes and comments to any task with Enter-key or button submission.
+  * Comments are immutably appended, stored per task, and automatically persisted to `localStorage`.
+  * Visual comment count badge on task cards (`💬 N notes`) for at-a-glance visibility.
+* **Full Keyboard Accessibility:**
+  * **Arrow Key Navigation:** Focused cards can be moved between columns instantly using `ArrowLeft` (previous column) and `ArrowRight` (next column).
+  * **Card Selection:** Press `Enter` or `Space` on a focused card to select it for the activity timeline.
+  * **Accessible Move Buttons:** Dedicated `← Move` and `Move →` buttons on each card for keyboard users navigating via Tab, with disabled states at column boundaries.
+  * **Screen Reader Live Announcements:** WAI-ARIA `role="status"` live region (`aria-live="polite"`) announcing task moves, creations, updates, and deletions.
+  * **Independent Controls:** Move, Edit, and Delete buttons are strictly isolated to prevent accidental drag or click conflicts.
+  * **Semantic Labels:** Card drag indicator tooltip updated to "Drag to move column" accurately matching application behavior.
 
 ---
 
@@ -38,128 +60,107 @@ This project was built following senior frontend engineering standards as Phase 
 
 ```text
 Neosoft_kanban_AIAgent/
-├── .agents/                    # Workspace agent rules & configurations
-├── public/                     # Static assets
+├── .agents/
+│   └── rules/
+│       └── senior-frontend-guidelines.md   # Senior frontend standards & instructions
+├── dist/                                   # Production build output
 ├── src/
 │   ├── components/
-│   │   ├── DeleteConfirmModal.jsx  # Accessible delete confirmation dialog
-│   │   ├── KanbanBoard.jsx         # Board state manager, stats, & DnD coordinator
-│   │   ├── KanbanColumn.jsx        # Column container & HTML5 drop zone
-│   │   ├── TaskCard.jsx            # Draggable task card with action handlers
-│   │   └── TaskForm.jsx            # Create and Edit task modal dialog
+│   │   ├── DeleteConfirmModal.jsx          # Accessible task deletion confirmation modal
+│   │   ├── KanbanBoard.jsx                 # Board coordinator, filters, DnD, keyboard movement & activity
+│   │   ├── KanbanColumn.jsx                # Lifecycle column & HTML5 drop zone
+│   │   ├── MessyTaskList.jsx               # Task notes timeline, session timer & comment posting (Phase 3)
+│   │   ├── TaskCard.jsx                    # Accessible draggable task card with keyboard & move controls
+│   │   └── TaskForm.jsx                    # Accessible task create & edit modal dialog
 │   ├── constants/
-│   │   └── columns.js              # Column configurations & storage keys
+│   │   └── columns.js                      # Column metadata, priority tokens & storage keys
 │   ├── utils/
-│   │   └── storage.js              # Safe localStorage load/save & sequential ID generation (`generateNextTaskId`)
-│   ├── App.jsx                     # Top-level composition component
-│   ├── index.css                   # Design tokens, CSS variables, & responsive styles
-│   └── main.jsx                    # React 18 DOM mount point
-├── index.html                      # HTML template with meta tags & Inter typography
-├── package.json                    # Minimal dependencies (React 18 + Vite)
-├── vite.config.js                  # Vite configuration with React plugin
-└── README.md                       # Comprehensive documentation
+│   │   ├── dates.js                        # Timezone-safe calendar date comparison & formatting
+│   │   └── storage.js                      # Safe localStorage load/save & sequential ID generation
+│   ├── App.jsx                             # Clean application root component
+│   ├── index.css                           # Design tokens, responsive grid, animations & utility classes
+│   └── main.jsx                            # React 18 DOM mount point
+├── index.html                              # HTML5 template with Inter typography
+├── package.json                            # Minimal dependencies (React 18 + Vite)
+├── package-lock.json                       # Dependency lockfile
+├── vite.config.js                          # Vite build configuration
+├── PROMPT_AND_COMPARISON_LOG.md            # AI Agent comparison log & evaluation report
+└── README.md                               # Comprehensive documentation
 ```
 
 ---
 
-## 🛠️ Architecture & Mechanics
+## 🛠️ Architecture & Data Flow
 
-### 1. Native HTML5 Drag and Drop
-
-The drag-and-drop mechanism is implemented using zero external libraries:
+### 1. Dual Movement Mechanics (Drag-and-Drop + Keyboard)
 
 ```text
-User initiates drag on <TaskCard>
-   │ (onDragStart) -> Sets dataTransfer.setData('text/plain', taskId)
-   │               -> Sets dataTransfer.effectAllowed = 'move'
-   │               -> Emits onDragStart(taskId) to apply visual dragging styles
-   ▼
-User hovers over a <KanbanColumn>
-   │ (onDragOver)  -> Calls e.preventDefault() to mark as valid drop target
-   │ (onDragEnter) -> Adds 'kanban-column--drag-over' visual indicator
-   │ (onDragLeave) -> Clears visual indicator when cursor leaves container
-   ▼
-User releases over destination column
-   │ (onDrop)      -> Retrieves taskId via e.dataTransfer.getData('text/plain')
-   │               -> Validates taskId and destination column
-   │               -> Updates task.status in React state
-   │               -> Syncs updated array to localStorage
-   ▼
-Destination column re-renders immediately with the moved task
+MOUSE INTERACTION (HTML5 Drag and Drop):
+User drags <TaskCard> ──► onDragStart: dataTransfer.setData('text/plain', taskId)
+                      ──► Column onDragOver: e.preventDefault()
+                      ──► Column onDrop: dataTransfer.getData('text/plain')
+                      ──► handleMoveTask(taskId, targetColumnId)
+
+KEYBOARD INTERACTION:
+User tabs to <TaskCard> (tabIndex=0)
+  ├── Press ArrowRight ──► Moves to next column if available
+  ├── Press ArrowLeft  ──► Moves to previous column if available
+  ├── Press Enter/Space──► Selects task for Activity Timeline
+  └── Tab to Move buttons ──► Enter on "← Move" or "Move →"
+                       ──► handleMoveTask(taskId, targetColumnId)
+                       ──► Announces via aria-live: "Moved task X to In Progress"
 ```
 
-### 2. State & localStorage Persistence
+### 2. State & Persistence Pipeline
 
-* **Key:** `kanban_tasks`
-* **Safe Reading (`loadTasksFromStorage`):**
-  * Reads raw data inside a `try/catch` block.
-  * Parses JSON and validates each task object against expected schema (`id`, `title`, `description`, `status`).
-  * If localStorage is empty or contains malformed data, gracefully falls back to `INITIAL_SAMPLE_TASKS`.
-* **Safe Writing (`saveTasksToStorage`):**
-  * Automatically synced inside `useEffect` on `tasks` change.
-  * Wrapped in `try/catch` to guard against quota limits or private-browsing restrictions.
-
-### 3. Task Structure
-
-```javascript
-{
-  id: "task-1",                    // Unique string identifier (not array index)
-  title: "Example task",          // Non-empty string
-  description: "Task details",    // String (optional)
-  status: "todo",                 // "todo" | "in-progress" | "done"
-  priority: "high"                // "high" | "medium" | "low"
-}
+```text
+[Browser localStorage: "kanban_tasks"]
+             ▲                          │
+             │ saveTasksToStorage       │ loadTasksFromStorage
+             │                          ▼
+     [KanbanBoard State] ◄──── Tasks Array with { id, title, status, priority, dueDate, comments }
+             │
+             ├── Selected Task ID ──► <MessyTaskList task={selectedTask} onUpdate={handleTaskUpdate} />
+             │                              │
+             │                              ▼ (User posts comment)
+             │                        onUpdate(taskId, { comments, commentCount })
+             │                              │
+             └──────────────────────────────┘
+                    (State updates immutably ──► auto-persists to localStorage)
 ```
 
 ---
 
 ## 💻 Running the Application Locally
 
-### 1. Install dependencies
-
+### 1. Install Dependencies
 ```bash
 npm install
 ```
 
-### 2. Start the Vite development server
-
+### 2. Start the Development Server
 ```bash
 npm run dev
 ```
+Open `http://localhost:5173` (or the port displayed in your terminal).
 
-The application will be served at `http://localhost:3000`.
-
-### 3. Build for production
-
+### 3. Build for Production
 ```bash
 npm run build
 ```
+Generates optimized static assets into the `dist/` directory.
 
 ---
 
-## ✅ Verification Checklist
+## ✅ Quality & Verification Checklist
 
-* [x] **Task Creation:**
-  * Created task with title and description.
-  * Appears in "To Do" column by default.
-  * Empty / whitespace title triggers error message and blocks submission.
-* [x] **Task Editing:**
-  * Clicking "Edit" opens modal with existing title and description pre-filled.
-  * Saves changes while preserving the task's existing column.
-* [x] **Task Deletion:**
-  * Clicking "Delete" opens confirmation dialog.
-  * Confirming deletion removes task from state and updates localStorage immediately.
-* [x] **Drag and Drop:**
-  * Drag To Do → In Progress.
-  * Drag In Progress → Done.
-  * Drag Done → To Do.
-  * Move same task multiple times across columns.
-  * Actions buttons isolated from drag gestures.
-* [x] **Persistence:**
-  * Page refresh retains created, edited, moved, and deleted tasks.
-  * Malformed data in localStorage resets gracefully without crashing.
-* [x] **UI & Accessibility:**
-  * Clean 3-column layout with status indicators and task counters.
-  * Empty state graphic and text when a column has zero tasks.
-  * Keyboard navigation and Escape-key dismiss on modals.
-  * Responsive layout across desktop, tablet, and mobile viewports.
+* [x] **Task Creation:** Add tasks with title, description, priority, and optional due date.
+* [x] **Task Editing:** Update task details while preserving existing column status and comment history.
+* [x] **Task Deletion & Undo:** Accessible modal confirmation followed by a 5-second Undo notification toast.
+* [x] **HTML5 Drag and Drop:** Drag cards smoothly between To Do, In Progress, and Done.
+* [x] **Keyboard Navigation:** Move tasks between columns using Left/Right arrow keys or explicit move buttons.
+* [x] **Due Dates & Overdue:** Calendar validation and prominent overdue badges for late tasks.
+* [x] **Priority Filtering:** Filter tasks by All, High, Medium, or Low with live counter pills.
+* [x] **Phase 3 Activity Integration:** Add and view notes/comments per task with real-time session timer.
+* [x] **Data Persistence:** All task creations, edits, column moves, and activity comments persist across page refreshes.
+* [x] **Senior Standards & Cleanup:** Unused exports removed, drag tooltip wording corrected, no misleading performance claims.
